@@ -10,7 +10,7 @@ RUN pip install -r requirements.txt
 COPY ./imageEnhancer /app/imageEnhancer
 RUN cd imageEnhancer && python setup.py develop
 RUN cd /app
-
+COPY ./ ./
 EXPOSE 5000
 
 # docker build -t image-processing .

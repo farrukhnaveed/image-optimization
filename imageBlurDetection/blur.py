@@ -1,5 +1,6 @@
 
 import cv2
+import os
 import numpy as np
 import shutil
 from .Helpers import *
@@ -9,7 +10,7 @@ PATH = "/app/imageInput/raw"
 DEST = "/app/imageInput/enhance"
 BLUR_THRESHOLD = 100  
 # Change the directory
-os.chdir(PATH)
+# os.chdir(PATH)
 
 def test():
     images = isBlur()
@@ -17,7 +18,7 @@ def test():
 
 def isBlur():
     images = []
-    for file in os.listdir():
+    for file in os.listdir(PATH):
 
         file_path = f"{PATH}/{file}"
         # f = open(file_path, "r")
@@ -47,8 +48,17 @@ def findBlur():
 
     for image in images:
         if (image['isBlur'] == True):
-            shutil.copy(image['filePath'], DEST)
+            file_name = image['filePath'].split("/")
+            file_name = image[len(file_name) - 1]
+            flagBlur(file_name)
+        shutil.copy(image['filePath'], DEST)
+        os.unlink(image['filePath'])
 
+def flagBlur(image):
+    image = image.split("@@@")
+    id = image[0]
+    table = image[1]
+    #TODO: update row and set isBlur flag = 1
 if __name__ == "__main__":
     # print(__file__)
     findBlur()
