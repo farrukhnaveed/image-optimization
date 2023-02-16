@@ -99,7 +99,7 @@ def push_image_ids():
         messages = getPropertyImagesParamsDB()
         credentials = pika.PlainCredentials(USERNAME, PASSWORD)
         connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=HOST, port=PORT, credentials=credentials)
+            pika.ConnectionParameters(heartbeat=600, blocked_connection_timeout=300, host=HOST, port=PORT, credentials=credentials)
         )
         channel = connection.channel()
         channel.exchange_declare(EXCHANGE, durable=True, exchange_type="direct")

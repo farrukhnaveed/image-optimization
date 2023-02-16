@@ -13,7 +13,7 @@ USERNAME = os.getenv('RABBITMQ_USERNAME')
 PASSWORD = os.getenv('RABBITMQ_PASSWORD')
 
 credentials = pika.PlainCredentials(USERNAME, PASSWORD)
-connection= pika.BlockingConnection(pika.ConnectionParameters(host=HOST, port=PORT, credentials= credentials))
+connection= pika.BlockingConnection(pika.ConnectionParameters(heartbeat=600, blocked_connection_timeout=300, host=HOST, port=PORT, credentials= credentials))
 channel= connection.channel()
 channel.exchange_declare(EXCHANGE, durable=True, exchange_type='direct')
 channel.queue_declare(queue= QUEUE_NAME, durable=True)
