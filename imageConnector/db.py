@@ -1,4 +1,4 @@
-import os
+import os, json
 from dotenv import load_dotenv
 import mysql.connector
 from mysql.connector import errorcode
@@ -121,41 +121,62 @@ def get_last_queued_image_id(source):
 
 
 def add_queue(source, offset, limit):
+    image = ""
+    destination = ""
+    message = 'added in queue from DAG'
+    result = []
     if source == "fc_rental_photos":
+        destination = "fc_rental_photos"
+        # TODO: make bucket name dynamic
         image = "CONCAT('https://img.cuddlynest.com/images/listings/', product_image_dir, product_image)"
-    else:
-        image = ""
-    
-    query = "SELECT '{}', id, {}, 'added in queue from DAG' FROM {} LIMIT {} OFFSET {}".format(source, image, source, limit, offset)
-    result = execute(query)
+        
+        query = "SELECT id, {} FROM {} LIMIT {} OFFSET {}".format(image, source, limit, offset)
+        result = execute(query)
 
-    for (table, id, imageUrl, message) in result:
-        query = "INSERT INTO fc_photos_optimization_queue (source, source_id, image, message) VALUES ('{}', {}, '{}', '{}')".format(table, id, imageUrl, message)
+    for (id, imageUrl) in result:
+        allow_blur = 1
+        allow_optimize = 1
+        allow_reduce = 1
+        allow_resolution_size = 1
+        query = "INSERT INTO fc_photos_optimization_queue (source, source_id, destination, image, message, allow_blur, allow_optimize, allow_reduce, allow_resolution_size) VALUES ('{}', {}, '{}', '{}', '{}', {}, {}, {}, {})".format(source, id, destination, imageUrl, message, allow_blur, allow_optimize, allow_reduce, allow_resolution_size)
         queue_id = execute(query, 'insert')
-        log(queue_id[0], source, id, 'pending', message)
+        log(queue_id[0], message)
 
-def log(queue_id, source, source_id, status, message, step = None, error = None, detail = None):
-    insertColumns = []
-    insertValues = []
-    if step == None:
-        step = status
-    if error:
-        insertColumns.append('error')
-        insertValues.append(error)
-    if detail:
-        insertColumns.append('detail')
-        insertValues.append(detail)
+def log(queue_id, message, step = None, error = None, detail = None):
+    # , destination, allow_blur, allow_optimize, allow_reduce, allow_resolution_size
+    query = "SELECT status, source, source_id, is_blur, should_enhance, is_enhanced, is_optimized, is_reduced FROM fc_photos_optimization_queue WHERE id = %s" % queue_id
+    result = execute(query)
+    
+    for (status, source, source_id, is_blur, should_enhance, is_enhanced, is_optimized, is_reduced) in result:
+        queue_state = json.dumps({
+            "status":status,
+            "is_blur":is_blur,
+            "should_enhance":should_enhance,
+            "is_enhanced":is_enhanced,
+            "is_optimized":is_optimized,
+            "is_reduced":is_reduced
+        })
+        insertColumns = []
+        insertValues = []
+        if step == None:
+            step = status
+        if error:
+            insertColumns.append('error')
+            insertValues.append(error)
+        if detail:
+            insertColumns.append('detail')
+            insertValues.append(detail)
 
-    if len(insertColumns) > 0:
-        for i in range(0, len(insertColumns)):
-            if i == 0:
-                insertColumns[i] = "," + insertColumns[i]
-            insertColumns[i] = "'" + insertColumns[i] + "'"
-            insertValues[i] = "'" + insertValues[i] + "'"
-            if i + 1 == len(insertColumns):
-                insertValues[i] = "," + insertValues[i]
-    query = "INSERT INTO fc_photos_optimization_queue_audit_log (queue_id, source, source_id, step, message, status {}) VALUES ({}, '{}', {}, '{}', '{}', '{}' {})".format(",".join(insertColumns), queue_id, source, source_id, step, message, status, ",".join(insertValues))
-    execute(query, 'insert')
+        if len(insertColumns) > 0:
+            for i in range(0, len(insertColumns)):
+                if i == 0:
+                    insertColumns[i] = "," + insertColumns[i]
+                insertColumns[i] = "'" + insertColumns[i] + "'"
+                insertValues[i] = "'" + insertValues[i] + "'"
+                if i + 1 == len(insertColumns):
+                    insertValues[i] = "," + insertValues[i]
+        query = "INSERT INTO fc_photos_optimization_queue_audit_log (queue_id, status, source, source_id, step, message, queue_state {}) VALUES ({}, '{}', '{}', {}, '{}', '{}', '{}' {})".format(",".join(insertColumns), queue_id, status, source, source_id, step, message, queue_state, ",".join(insertValues))
+        execute(query, 'insert')
 
 
 def getPendingQueueIds(limit):
@@ -167,14 +188,14 @@ def getPendingQueueIds(limit):
 
     return ids
 
-def updateQueueStatus(ids):
-    status = 'pushed'
-    message = 'pushed to queue'
-    query = "UPDATE fc_photos_optimization_queue set status = '{}', message = '{}' where id in ( {} )".format(status, message, ",".join([str(k) for k in ids]))
+def updateQueue(id, data):
+    keys = list(data.keys())
+    values = list(data.values())
+
+    for idx, x in enumerate(values):
+        if ( x.isnumeric() ):
+            values[idx] = keys[idx] + "=" + str(x)
+        else:
+            values[idx] = keys[idx] + "='" + str(x) + "'"
+    query = "UPDATE fc_photos_optimization_queue set {} where id = {}".format(",".join(values), str(id))
     execute(query, 'insert')
-
-    query = "SELECT id, source, source_id from fc_photos_optimization_queue where id in ( {} )".format(",".join([str(k) for k in ids]))
-    result = execute(query)
-    for (id, source, source_id) in result:
-        log(id, source, source_id, status, message)
-
