@@ -199,3 +199,4 @@ def updateQueue(id, data):
             values[idx] = keys[idx] + "='" + str(x) + "'"
     query = "UPDATE fc_photos_optimization_queue set {} where id = {}".format(",".join(values), str(id))
     execute(query, 'insert')
+
