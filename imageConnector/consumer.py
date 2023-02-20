@@ -2,6 +2,7 @@ import pika
 import json
 import os
 import sys
+from db import updateQueue, log
 from dotenv import load_dotenv
 sys.path.append('../')
 from process import process
@@ -24,17 +25,21 @@ print(' [*] Waiting for messages. To exit press CTRL+C')
 
 
 def callback(ch, method, properties, body):
+    ch.basic_ack(delivery_tag=method.delivery_tag)
     data = json.loads(body)
     print(" [x] Received %r" % str(body))
-    print(" [x] ")
-    print(" [x] ")
-    print(" [x] ")
-    process(data)
-    print(" [x] ")
-    print(" [x] ")
-    print(" [x] ")
+    updateQueue(data['queue_id'], {
+        "status": "running",
+        "message": 'started request' 
+    })
+    log(data['queue_id'], 'before calling process function')
+    # process(data['queue_id'])
+    updateQueue(data['queue_id'], {
+        "status": "completed",
+        "message": 'completed request' 
+    })
+    log(data['queue_id'], 'after calling process function')
     print(" [x] Done")
-    ch.basic_ack(delivery_tag=method.delivery_tag)
 
 
 channel.basic_qos(prefetch_count=1)
