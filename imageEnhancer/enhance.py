@@ -7,9 +7,10 @@ from basicsr.utils.download_util import load_file_from_url
 
 from realesrgan import RealESRGANer
 from realesrgan.archs.srvgg_arch import SRVGGNetCompact
+from imageConnector import db
 
-
-def enhance():
+def enhance(queue_id):
+    status = False
     """Inference demo for Real-ESRGAN.
     """
     parser = argparse.ArgumentParser()
@@ -132,8 +133,7 @@ def enhance():
 
     for idx, path in enumerate(paths):
         imgname, extension = os.path.splitext(os.path.basename(path))
-        print('Enhancing', imgname)
-
+        db.log(queue_id, f'Enhancing image {imgname}.{extension}', 'enhance')
         img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
         if len(img.shape) == 3 and img.shape[2] == 4:
             img_mode = 'RGBA'
@@ -146,8 +146,7 @@ def enhance():
             else:
                 output, _ = upsampler.enhance(img, outscale=args.outscale)
         except RuntimeError as error:
-            print('Error', error)
-            print('If you encounter CUDA out of memory, try to set --tile with a smaller number.')
+            db.log(queue_id, 'could not enhance', 'enhance', 'RuntimeError', 'If you encounter CUDA out of memory, try to set --tile with a smaller number.', str(error))
         else:
             if args.ext == 'auto':
                 extension = extension[1:]
@@ -160,9 +159,11 @@ def enhance():
             else:
                 save_path = os.path.join(args.output, f'{imgname}_{args.suffix}.{extension}')
             cv2.imwrite(save_path, output)
+            status = True
             os.unlink(path)
-            #TODO: log that image is enhanced
+            db.log(queue_id, f'Enhanced image {imgname}.{extension}', 'enhance')
+    return status
 
 
 if __name__ == '__main__':
-    main()
+    enhance(0)

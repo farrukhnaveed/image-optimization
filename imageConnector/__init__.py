@@ -1,8 +1,8 @@
-from db import getData
+from db import execute
 
 def getImageUrl(data):
     if data["source"] == "db":
-        imagesData = getData(data)
+        imagesData = []
     else:
         imagesData = []
 

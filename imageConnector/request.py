@@ -7,10 +7,11 @@ INPUT_RAW = "/app/imageInput/raw"
 INPUT_ENHANCE = "/app/imageInput/enhance"
 OUTPUT_ENHANCED = "/app/imageOutput/enhanced"
 OUTPUT_OPTIMIZED = "/app/imageOutput/optimized"
+OUTPUT_REDUCED = "/app/imageOutput/reduced"
 
 def cleanFolder(path = None):
-    if (path == None):
-        path = [INPUT_RAW, INPUT_ENHANCE, OUTPUT_ENHANCED, OUTPUT_OPTIMIZED]
+    if (path is None):
+        path = [INPUT_RAW, INPUT_ENHANCE, OUTPUT_ENHANCED, OUTPUT_OPTIMIZED, OUTPUT_REDUCED]
     else:
         path = [path]
 
@@ -28,8 +29,12 @@ def cleanFolder(path = None):
             except Exception as e:
                 print('Failed to delete %s. Reason: %s' % (file_path, e))
 
-def download(url, id, table):
-    file_name = "{}@@@{}".format(id, table)
+def download(url, id, source):
+    result = {
+        "status": False,
+        "message": "Unable to download image"
+    }
+    file_name = "{}@@@{}".format(id, source)
     res = requests.get(url, stream = True)
     extension = mimetypes.guess_extension(res.headers.get('content-type', '').split(';')[0]) 
 
@@ -37,6 +42,6 @@ def download(url, id, table):
         absolute_file_name = "{}/{}{}".format(INPUT_RAW, file_name, extension or '.jpg')
         with open(absolute_file_name,'wb') as f:
             shutil.copyfileobj(res.raw, f)
-        print('Image sucessfully Downloaded: ',absolute_file_name)
-    else:
-        print('Image Couldn\'t be retrieved')
+        result["status"] = True
+        result["message"] = "Image sucessfully Downloaded"
+    return result

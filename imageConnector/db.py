@@ -11,79 +11,38 @@ mysqlConfig = {
     "database": os.getenv("MYSQL_DATABASE"),
     "raise_on_warnings": True,
 }
+BUCKET_NAME = os.getenv("S3_BUCKET")
 
-
-def getData(data):
-    imagesData = []
-    try:
-        cnx = mysql.connector.connect(**mysqlConfig)
-        cursor = cnx.cursor()
-
-        query = "SELECT {},id FROM {} WHERE id in ( {} )".format(
-            data["columns"], data["table"], data["imageIds"]
-        )
-        cursor.execute(query)
-        columns = data["columns"].split(",")
-
-        urlSplit = data["urlPattern"].split("{}")
-
-        for columns in cursor:
-            index = 0
-            url = ""
-            for urlPart in urlSplit:
-                index = index + 1
-                if index < len(urlSplit):
-                    url = url + urlPart + columns[index - 1]
-
-            image = {"id": columns[2], "table": data["table"], "url": url, "meta": {}}
-            index = 0
-            for key in data["columns"].split(","):
-                image["meta"][key] = columns[index]
-                index = index + 1
-            imagesData.append(image)
-
-        cursor.close()
-        cnx.close()
-
-        return imagesData
-    except mysql.connector.Error as err:
-        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-            print("Something is wrong with your user name or password")
-        elif err.errno == errorcode.ER_BAD_DB_ERROR:
-            print("Database does not exist")
-        else:
-            print(err)
+def updateRecord(queueObj, imageObj):
+    if queueObj["source"] == "fc_rental_photos":
+        query = "INSERT INTO {} (product_image_dir, product_image, original_image_extension, queue_id, resolution_width, resolution_height, image_size, resolution_type, s3_bucket, product_id, imgPriority, caption, status, imgtitle) ( SELECT '{}', '{}', '{}', {}, {}, {}, {}, '{}', '{}', product_id, imgPriority, caption, status, imgtitle FROM {} where id = {} )".format(queueObj["destination"],imageObj["dir"], imageObj["file_name"], imageObj["file_type"], queueObj["id"], imageObj["width"], imageObj["height"], imageObj["size"], imageObj["resolution_type"], BUCKET_NAME, queueObj["source"], queueObj["source_id"])
+    elif queueObj["source"] == "fc_rental_photos_optimized":
+        query = "UPDATE {} SET product_image_dir = '{}', product_image = '{}', original_image_extension = '{}', queue_id = {},  resolution_width = {}, resolution_height = {}, image_size = {}, resolution_type ='{}', s3_bucket='{}' where id = {}".format(queueObj["destination"],imageObj["dir"], imageObj["file_name"], imageObj["file_type"], queueObj["id"], imageObj["width"], imageObj["height"], imageObj["size"], imageObj["resolution_type"], BUCKET_NAME, queueObj["source_id"] )
+    elif queueObj['source'] == "didatravel_properties_images":
+        query = "INSERT INTO {} (product_image_dir, product_image, original_image_extension, queue_id, resolution_width, resolution_height, image_size, resolution_type, s3_bucket, product_id) ( SELECT '{}', '{}', '{}', {}, {}, {}, {}, '{}', '{}', product_id FROM {} where id = {} )".format(queueObj["destination"],imageObj["dir"], imageObj["file_name"], imageObj["file_type"], queueObj["id"], imageObj["width"], imageObj["height"], imageObj["size"], imageObj["resolution_type"], BUCKET_NAME, queueObj["source"], queueObj["source_id"])
     else:
-        cnx.close()
+        query = ""
 
-
-def updateData(data, imageObj):
-    imagesData = []
-    try:
-        cnx = mysql.connector.connect(**mysqlConfig)
-        cursor = cnx.cursor()
-
-        query = "UPDATE {} SET product_image='{}', product_image_dir='{}', original_image_extension='{}' WHERE id = {}".format(
-            imageObj["table"], imageObj["file_name"], imageObj["dir"], imageObj["file_type"], imageObj["id"]
-        )
-        cursor.execute(query)
-        cnx.commit()
-
-        cursor.close()
-        cnx.close()
-
-        return imagesData
-    except mysql.connector.Error as err:
-        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-            print("Something is wrong with your user name or password")
-        elif err.errno == errorcode.ER_BAD_DB_ERROR:
-            print("Database does not exist")
-        else:
-            print(err)
+    if query == "":
+        log(queueObj["id"], "invalid source or query", "db", "query", queueObj['source'])
     else:
-        cnx.close()
+        execute(query, 'insert', queueObj["id"])
 
-def execute(query, type = 'select'):
+
+def updateSize(queueObj, imageObj):
+    if queueObj["source"] == "fc_rental_photos_optimized":
+        query = "UPDATE {} SET queue_id = {},  resolution_width = {}, resolution_height = {}, image_size = {} where id = {}".format(queueObj["destination"], queueObj["id"], imageObj["width"], imageObj["height"], imageObj["size"], queueObj["source_id"] )
+    else:
+        query = ""
+
+    if query == "":
+        log(queueObj["id"], "invalid source or query", "db", "query", queueObj['source'])
+    else:
+        execute(query, 'insert', queueObj["id"])
+
+
+
+def execute(query, type = 'select', queue_id = None):
     result = []
     try:
         cnx = mysql.connector.connect(**mysqlConfig)
@@ -97,12 +56,30 @@ def execute(query, type = 'select'):
         cursor.close()
         cnx.close()
     except mysql.connector.Error as err:
-        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-            print("Something is wrong with your user name or password")
-        elif err.errno == errorcode.ER_BAD_DB_ERROR:
-            print("Database does not exist")
+        if (queue_id is None):
+            if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+                print("Something is wrong with your user name or password")
+            elif err.errno == errorcode.ER_BAD_DB_ERROR:
+                print("Database does not exist")
+            else:
+                error = str(err)
+                detail = {
+                    "query": query,
+                    "error": error[:500]
+                }
+                print(detail)
         else:
-            print(err)
+            if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+                log(queue_id, "Invalid db credentials", 'db', 'query', query)
+            elif err.errno == errorcode.ER_BAD_DB_ERROR:
+                log(queue_id, "Database does not exist", 'db', 'query', query)
+            else:
+                error = str(err)
+                detail = {
+                    "query": query,
+                    "error": error[:500]
+                }
+                log(queue_id, "Something went wrong", 'db', 'query', detail)
     else:
         cnx.close()
     return result
@@ -113,7 +90,7 @@ def get_last_queued_image_id(source):
     result = execute(query)
     
     for (source_id,) in result:
-        if source_id == None:
+        if source_id is None:
             id = 0
         else:
             id = source_id
@@ -125,10 +102,9 @@ def add_queue(source, offset, limit):
     destination = ""
     message = 'added in queue from DAG'
     result = []
-    if source == "fc_rental_photos":
-        destination = "fc_rental_photos"
-        # TODO: make bucket name dynamic
-        image = "CONCAT('https://img.cuddlynest.com/images/listings/', product_image_dir, product_image)"
+    if source == "fc_rental_photos" or source == "fc_rental_photos_optimized":
+        destination = "fc_rental_photos_optimized"
+        image = "CONCAT('https://%s/images/listings/', product_image_dir, product_image)" % BUCKET_NAME
         
         query = "SELECT id, {} FROM {} LIMIT {} OFFSET {}".format(image, source, limit, offset)
         result = execute(query)
@@ -158,25 +134,17 @@ def log(queue_id, message, step = None, error = None, detail = None):
         })
         insertColumns = []
         insertValues = []
-        if step == None:
+        if step is None:
             step = status
-        if error:
-            insertColumns.append('error')
-            insertValues.append(error)
-        if detail:
-            insertColumns.append('detail')
-            insertValues.append(detail)
+        if error is not None:
+            insertColumns.append(',error')
+            insertValues.append(",'%s'" % error)
+        if detail is not None:
+            insertColumns.append(',detail')
+            insertValues.append(",'%s'" % detail)
 
-        if len(insertColumns) > 0:
-            for i in range(0, len(insertColumns)):
-                if i == 0:
-                    insertColumns[i] = "," + insertColumns[i]
-                insertColumns[i] = "'" + insertColumns[i] + "'"
-                insertValues[i] = "'" + insertValues[i] + "'"
-                if i + 1 == len(insertColumns):
-                    insertValues[i] = "," + insertValues[i]
         query = "INSERT INTO fc_photos_optimization_queue_audit_log (queue_id, status, source, source_id, step, message, queue_state {}) VALUES ({}, '{}', '{}', {}, '{}', '{}', '{}' {})".format(",".join(insertColumns), queue_id, status, source, source_id, step, message, queue_state, ",".join(insertValues))
-        execute(query, 'insert')
+        execute(query, 'insert', queue_id)
 
 
 def getPendingQueueIds(limit):
@@ -193,13 +161,40 @@ def updateQueue(id, data):
     values = list(data.values())
 
     for idx, x in enumerate(values):
-        if ( x.isnumeric() ):
+        if ( isinstance(x, int) or (isinstance(x, str) and x.isnumeric())):
             values[idx] = keys[idx] + "=" + str(x)
         else:
             values[idx] = keys[idx] + "='" + str(x) + "'"
     query = "UPDATE fc_photos_optimization_queue set {} where id = {}".format(",".join(values), str(id))
     execute(query, 'insert')
 
+
+def get_queue(queue_id):
+    queue_obj = {
+        "id": None,
+        "source": '',
+        "source_id": None,
+        "destination": '',
+        "image": '',
+        'allow_blur': False,
+        'allow_optimize': False,
+        'allow_reduce': False,
+        'allow_resolution_size': False
+    }
+    query = "select source, source_id, destination, image, allow_blur, allow_optimize, allow_reduce, allow_resolution_size from fc_photos_optimization_queue where id = {}".format(queue_id)
+    result = execute(query)
+    
+    for (source, source_id, destination, image, allow_blur, allow_optimize, allow_reduce, allow_resolution_size) in result:
+        queue_obj["id"] = queue_id
+        queue_obj["source"] = source
+        queue_obj["source_id"] = source_id
+        queue_obj["destination"] = destination
+        queue_obj["image"] = image
+        queue_obj["allow_blur"] = True if allow_blur == 1 else False
+        queue_obj["allow_optimize"] = True if allow_optimize == 1 else False
+        queue_obj["allow_reduce"] = True if allow_reduce == 1 else False
+        queue_obj["allow_resolution_size"] = True if allow_resolution_size == 1 else False
+    return queue_obj
 
 
 

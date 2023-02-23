@@ -2,7 +2,7 @@ import pika
 import json
 import os
 import sys
-from db import updateQueue, log
+from db import updateQueue, log, get_queue
 from dotenv import load_dotenv
 sys.path.append('../')
 from process import process
@@ -32,13 +32,18 @@ def callback(ch, method, properties, body):
         "status": "running",
         "message": 'started request' 
     })
-    log(data['queue_id'], 'before calling process function')
-    # process(data['queue_id'])
-    updateQueue(data['queue_id'], {
-        "status": "completed",
-        "message": 'completed request' 
-    })
-    log(data['queue_id'], 'after calling process function')
+    
+    log(data['queue_id'], 'getting queue object', 'consumer')
+    queue_obj = get_queue(data['queue_id'])
+    if (queue_obj["image"] == '' or queue_obj["destination"] == ''):
+        updateQueue(queue_obj['id'] ,{
+            "status": "rejected",
+            "message": 'invalid queue data'})
+        log(queue_obj['id'], 'invalid message', 'consumer', 'queueObj', 'invalid queue data')
+        return
+    log(data['queue_id'], 'starting queue processing', 'consumer')
+    process(queue_obj)
+    log(data['queue_id'], 'finished queue processing', 'consumer')
     print(" [x] Done")
 
 

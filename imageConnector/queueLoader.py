@@ -39,6 +39,7 @@ def push_image_ids():
         channel = connection.channel()
         channel.exchange_declare(EXCHANGE, durable=True, exchange_type="direct")
         channel.queue_declare(queue=QUEUE_NAME, durable=True)
+        channel.confirm_delivery()
         channel.queue_bind(exchange=EXCHANGE, queue=QUEUE_NAME, routing_key=QUEUE_NAME)
 
         for id in ids:
@@ -51,9 +52,15 @@ def push_image_ids():
                 properties=pika.BasicProperties(
                     delivery_mode=pika.spec.PERSISTENT_DELIVERY_MODE
                 ),
+                mandatory=True,
             )
         connection.close()
-        db.updateQueueStatus(ids)
+        for id in ids:
+            db.updateQueue(id ,{
+                "status": "pushed",
+                "message": 'pushed to queue'})
+            
+            db.log(id, 'pushed to queue')
         return " [x] Pushed %r" % str(ids)
     else:
         return " [x] Not pushed, Queue count: %r" % str(queueCount)
@@ -66,5 +73,5 @@ def set_queue_product_images():
 
 if __name__ == "__main__":
     set_queue_product_images()
-    push_image_ids()
-    # print(result)
+    result = push_image_ids()
+    print(result)

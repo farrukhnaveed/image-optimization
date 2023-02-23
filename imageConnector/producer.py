@@ -39,6 +39,8 @@ channel.basic_publish(
     body=json.dumps(message),
     properties=pika.BasicProperties(
         delivery_mode=pika.spec.PERSISTENT_DELIVERY_MODE
-    ))
+    ),
+    mandatory=True
+)
 print(" [x] Sent %r" % str(message))
 connection.close()

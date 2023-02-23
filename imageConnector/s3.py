@@ -2,12 +2,15 @@ import os, random, string
 from datetime import datetime
 import boto3
 from botocore.exceptions import NoCredentialsError
+from dotenv import load_dotenv
+load_dotenv()
 
 ACCESS_KEY = os.getenv("S3_KEY")
 SECRET_KEY = os.getenv("S3_SECRET")
 BUCKET_NAME = os.getenv("S3_BUCKET")
-S3_BASE_PATH =  os.getenv("S3_S3_BASE_PATH")
-LOCAL_BASE_PATH = '/app/imageOutput/optimized/'
+S3_BASE_PATH = os.getenv("S3_S3_BASE_PATH")
+LOCAL_OPTIMIZED_PATH = '/app/imageOutput/optimized/'
+LOCAL_REDUCED_PATH = '/app/imageOutput/reduced/'
 
 
 def upload_to_aws(local_file):
@@ -33,15 +36,16 @@ def upload_to_aws(local_file):
         response["message"] = "The file was not found"
     except NoCredentialsError:
         response["message"] = "Credentials not available"
-    
+    # print(response)
     return response
 
 
-def upload():
+def upload(reduce_path = False):
     response = []
-    for image in os.listdir(LOCAL_BASE_PATH):
+    path = LOCAL_REDUCED_PATH if reduce_path else LOCAL_OPTIMIZED_PATH
+    for image in os.listdir(path):
         id, table = image.split('.', 1)[0].split("@@@")
-        result = upload_to_aws(LOCAL_BASE_PATH+image)
+        result = upload_to_aws(path+image)
         result["id"] = id
         result["table"] = table
         response.append(result)
