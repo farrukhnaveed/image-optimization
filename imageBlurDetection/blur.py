@@ -12,7 +12,7 @@ load_dotenv()
 
 PATH = "/app/imageInput/raw"
 DEST = "/app/imageInput/enhance"
-OPTIMIZE_DEST = "/app/imageOutput/optimise"
+OPTIMIZE_DEST = "/app/imageOutput/optimized"
 IMAGE_BLUR_THRESHOLD = int(os.getenv('IMAGE_BLUR_THRESHOLD'))
 IMAGE_RESOLUTION_THRESHOLD_WIDTH = int(os.getenv('IMAGE_RESOLUTION_THRESHOLD_WIDTH'))
 IMAGE_RESOLUTION_THRESHOLD_HEIGHT = int(os.getenv('IMAGE_RESOLUTION_THRESHOLD_HEIGHT')) 

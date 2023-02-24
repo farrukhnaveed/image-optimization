@@ -8,7 +8,7 @@ load_dotenv()
 ACCESS_KEY = os.getenv("S3_KEY")
 SECRET_KEY = os.getenv("S3_SECRET")
 BUCKET_NAME = os.getenv("S3_BUCKET")
-S3_BASE_PATH = os.getenv("S3_S3_BASE_PATH")
+S3_BASE_PATH = os.getenv("S3_BASE_PATH")
 LOCAL_OPTIMIZED_PATH = '/app/imageOutput/optimized/'
 LOCAL_REDUCED_PATH = '/app/imageOutput/reduced/'
 
@@ -36,7 +36,6 @@ def upload_to_aws(local_file):
         response["message"] = "The file was not found"
     except NoCredentialsError:
         response["message"] = "Credentials not available"
-    # print(response)
     return response
 
 
