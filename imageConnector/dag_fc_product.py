@@ -35,8 +35,8 @@ default_args = {
 }
 
 # Instantiate a DAG object
-rabbitMQ_dag = DAG(
-    "rabbitMQ_dag",
+fc_product_dag = DAG(
+    "fc_product_dag",
     default_args=default_args,
     description="Image processing DAG",
     schedule_interval="* * * 1 *",
@@ -152,14 +152,14 @@ def push_image_ids():
 
 
 # Creating first task
-start_task = DummyOperator(task_id="start_task", dag=rabbitMQ_dag)
+start_task = DummyOperator(task_id="start_task", dag=fc_product_dag)
 
 producer_task = PythonOperator(
-    task_id="push_image_ids_task", python_callable=push_image_ids, dag=rabbitMQ_dag
+    task_id="push_image_ids_task", python_callable=push_image_ids, dag=fc_product_dag
 )
 
 # Creating last task
-end_task = DummyOperator(task_id="end_task", dag=rabbitMQ_dag)
+end_task = DummyOperator(task_id="end_task", dag=fc_product_dag)
 
 # Set the order of execution of tasks.
 start_task >> producer_task >> end_task

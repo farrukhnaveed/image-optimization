@@ -44,7 +44,7 @@ def isBlur():
         imageObj = Image.open(file_path)
         result = {
             "isBlur": fm < IMAGE_BLUR_THRESHOLD,
-            "shouldEnhance": imageObj.size[0] < IMAGE_RESOLUTION_THRESHOLD_WIDTH or imageObj.size[1] < IMAGE_RESOLUTION_THRESHOLD_HEIGHT,
+            "shouldEnhance": imageObj.size[0] < IMAGE_RESOLUTION_THRESHOLD_WIDTH and imageObj.size[1] < IMAGE_RESOLUTION_THRESHOLD_HEIGHT,
             "sharpness_value": sharpness_value,
             "filePath": file_path
         }
