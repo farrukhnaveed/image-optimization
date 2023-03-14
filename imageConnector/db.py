@@ -206,6 +206,11 @@ def get_queue(queue_id):
     return queue_obj
 
 
+def get_file_name(id, table):
+    query = "SELECT product_image_dir, product_image from {} where id = {}".format(table, id)
+    result = execute(query)
+    return result[0]
+
 def add_didatravel_properties_images_queue():
     query = """
         SELECT 

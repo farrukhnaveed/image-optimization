@@ -3,6 +3,7 @@ from datetime import datetime
 import boto3
 from botocore.exceptions import NoCredentialsError
 from dotenv import load_dotenv
+from imageConnector import db
 load_dotenv()
 
 ACCESS_KEY = os.getenv("S3_KEY")
@@ -13,13 +14,14 @@ LOCAL_OPTIMIZED_PATH = '/app/imageOutput/optimized/'
 LOCAL_REDUCED_PATH = '/app/imageOutput/reduced/'
 
 
-def upload_to_aws(local_file):
+def upload_to_aws(local_file, dir, file_name):
     filename, file_extension = os.path.splitext(local_file)
     current_datetime = datetime.now()
     response = {
         "local_file": local_file,
-        "dir": current_datetime.strftime("%Y/%m/%d/%H/"),
-        "file_name": ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(16)) + file_extension,
+        # "dir": current_datetime.strftime("%Y/%m/%d/%H/"),
+        "dir": dir,
+        "file_name": file_name + file_extension,
         "file_type": file_extension.split(".")[1],
         "status": False,
         "message": ""
@@ -44,16 +46,15 @@ def upload(reduce_path = False):
     path = LOCAL_REDUCED_PATH if reduce_path else LOCAL_OPTIMIZED_PATH
     for image in os.listdir(path):
         id, table = image.split('.', 1)[0].split("@@@")
-        result = upload_to_aws(path+image)
+        dir, title = db.get_file_name(id, table)
+        
+        filename, file_extension = os.path.splitext(title)
+        filename = filename + '_full' if reduce_path else filename + '_half'
+        result = upload_to_aws(path+image, dir, filename)
         result["id"] = id
         result["table"] = table
         response.append(result)
     return response
 
-def test():
-    test_file = "/app/imageOutput/optimized/1@@@BKP_fc_rental_photos.webp"
-    uploaded = upload_to_aws(test_file)
-    print(uploaded)
-
 if __name__ == "__main__":
-    test()
+    upload()
