@@ -49,7 +49,7 @@ def upload(reduce_path = False):
         dir, title = db.get_file_name(id, table)
         
         filename, file_extension = os.path.splitext(title)
-        filename = filename + '_full' if reduce_path else filename + '_half'
+        filename = filename + '_half' if reduce_path else filename + '_full'
         result = upload_to_aws(path+image, dir, filename)
         result["id"] = id
         result["table"] = table

@@ -30,7 +30,8 @@ def callback(ch, method, properties, body):
     if data["source"] == "rabbitmq":
         queueLoader.push_image_ids()
     elif data["source"] == "fc_rental_photos":
-        queueLoader.set_queue_product_images()
+        # queueLoader.set_queue_product_images()
+        queueLoader.set_queue_product_zurich_images()
     elif data["source"] == "fc_rental_photos_optimized":
         queueLoader.set_queue_product_images_optimized()
     elif data["source"] == "didatravel_properties_images":

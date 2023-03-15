@@ -1,7 +1,7 @@
 import sys
 import os
 import json
-from imageBlurDetection.blur import isBlur, transferEnhance, transferOptimize
+from imageBlurDetection.blur import isBlur, transferEnhance,  transferEnhanced, transferOptimize
 from imageEnhancer.enhance import enhance
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
@@ -30,12 +30,12 @@ def process(queue_obj):
         blurImages = isBlur()
         if (blurImages[0]['isBlur'] == False and blurImages[0]['shouldEnhance'] == False):
             db.updateQueue(queue_obj['id'] ,{
-                "message": "image is neither blur nor need enhancement",
-                "status": "completed"
+                "message": "image is neither blur nor need enhancement"
             })
             db.log(queue_obj['id'], "image is neither blur nor need enhancement", 'blur')
             queue_obj["allow_optimize"] = False
-            transferOptimize()
+            # transferOptimize()
+            transferEnhanced()
         else:
             transferEnhance()
             db.updateQueue(queue_obj['id'] ,{
@@ -47,7 +47,8 @@ def process(queue_obj):
     elif queue_obj["allow_optimize"] == True:
         transferEnhance()
     else:
-        transferOptimize()
+        # transferOptimize()
+        transferEnhanced()
 
     optimizeResult = {
         "quality": None
@@ -62,35 +63,36 @@ def process(queue_obj):
                 "message": "image enhanced",
                 "is_enhanced": 1
             })
-            db.log(queue_obj['id'], "Starting optimization", 'optimize')
-            optimizeResult = optimize()
-            db.log(queue_obj['id'], "image optimized to {}%".format(str(optimizeResult["quality"])), 'optimize')
 
-            db.log(queue_obj['id'], "Starting optimized image upload", 'upload')
-            response = upload()
-            imageObj = response[0]
-            if imageObj["status"] == True:
-                data = {
-                    "width": optimizeResult["width"],
-                    "height": optimizeResult["height"],
-                    "size": optimizeResult["size"],
-                    "dir": imageObj["dir"],
-                    "file_name": imageObj["file_name"],
-                    "file_type": imageObj["file_type"],
-                    "resolution_type": 'large'
-                }
-                db.updateQueue(queue_obj['id'] ,{
-                    "message": "image optimized",
-                    "is_optimized": 1
-                })
-                db.log(queue_obj['id'], "optimized image uploaded", 'upload', None, json.dumps(data))
+    db.log(queue_obj['id'], "Starting optimization", 'optimize')
+    optimizeResult = optimize()
+    db.log(queue_obj['id'], "image optimized to {}%".format(str(optimizeResult["quality"])), 'optimize')
 
-                db.log(queue_obj['id'], "Saving optimized image in DB", 'db')
-                db.updateRecord(queue_obj, data)
-                db.log(queue_obj['id'], "Saved optimized image in DB", 'db')
-            else:
-                db.log(queue_obj['id'], 'unable to upload optimized image', 'upload', '400', imageObj["message"])
-    
+    db.log(queue_obj['id'], "Starting optimized image upload", 'upload')
+    response = upload()
+    imageObj = response[0]
+    if imageObj["status"] == True:
+        data = {
+            "width": optimizeResult["width"],
+            "height": optimizeResult["height"],
+            "size": optimizeResult["size"],
+            "dir": imageObj["dir"],
+            "file_name": imageObj["file_name"],
+            "file_type": imageObj["file_type"],
+            "resolution_type": 'large'
+        }
+        db.updateQueue(queue_obj['id'] ,{
+            "message": "image optimized",
+            "is_optimized": 1
+        })
+        db.log(queue_obj['id'], "optimized image uploaded", 'upload', None, json.dumps(data))
+
+        db.log(queue_obj['id'], "Saving optimized image in DB", 'db')
+        db.updateRecord(queue_obj, data)
+        db.log(queue_obj['id'], "Saved optimized image in DB", 'db')
+    else:
+        db.log(queue_obj['id'], 'unable to upload optimized image', 'upload', '400', imageObj["message"])
+
     
     if queue_obj["allow_reduce"] == True:
         db.log(queue_obj['id'], "Starting reduction", 'reduce')

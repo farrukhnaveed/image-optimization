@@ -121,6 +121,22 @@ def add_queue(source, offset, limit, allow_blur = 0, allow_optimize = 0, allow_r
     for (id, imageUrl) in result:
         save_queue(source, id, destination, imageUrl, message, allow_blur, allow_optimize, allow_reduce, allow_resolution_size)
 
+
+def add_zurich_queue(source, last_image_id, limit, allow_blur = 0, allow_optimize = 0, allow_reduce = 0, allow_resolution_size = 1):
+    image = ""
+    destination = ""
+    message = 'added in queue from DAG'
+    result = []
+
+    destination = "fc_rental_photos_optimized"
+    image = "CONCAT('https://%s/images/listings/', product_image_dir, product_image)" % BUCKET_NAME
+    
+    query = "SELECT frp.id, {} from {} frp inner join fc_product fp on frp.product_id = fp.id where frp.id > {} and fp.m_city = 'Zurich' and fp.m_state = 'Zurich' and fp.m_country = 'Switzerland' and fp.status = 'Publish' and fp.import_source_id != 33 and fp.master_status = 'Active' and frp.status = 'Active' LIMIT {}".format(image, source, last_image_id, limit)
+    result = execute(query)
+
+    for (id, imageUrl) in result:
+        save_queue(source, id, destination, imageUrl, message, allow_blur, allow_optimize, allow_reduce, allow_resolution_size)
+
 def save_queue(source, source_id, destination, imageUrl, message, allow_blur = 0, allow_optimize = 0, allow_reduce = 0, allow_resolution_size = 1):
     query = "INSERT INTO fc_photos_optimization_queue (source, source_id, destination, image, message, allow_blur, allow_optimize, allow_reduce, allow_resolution_size) VALUES ('{}', {}, '{}', '{}', '{}', {}, {}, {}, {})".format(source, source_id, destination, imageUrl, message, allow_blur, allow_optimize, allow_reduce, allow_resolution_size)
     queue_id = execute(query, 'insert')

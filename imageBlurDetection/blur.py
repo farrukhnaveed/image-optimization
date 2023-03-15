@@ -12,6 +12,7 @@ load_dotenv()
 
 PATH = "/app/imageInput/raw"
 DEST = "/app/imageInput/enhance"
+ENHANCED_DEST = "/app/imageOutput/enhanced"
 OPTIMIZE_DEST = "/app/imageOutput/optimized"
 IMAGE_BLUR_THRESHOLD = int(os.getenv('IMAGE_BLUR_THRESHOLD'))
 IMAGE_RESOLUTION_THRESHOLD_WIDTH = int(os.getenv('IMAGE_RESOLUTION_THRESHOLD_WIDTH'))
@@ -67,6 +68,12 @@ def transferEnhance():
     for file in os.listdir(PATH):
         file_path = f"{PATH}/{file}"
         shutil.copy(file_path, DEST)
+        os.unlink(file_path)
+
+def transferEnhanced():
+    for file in os.listdir(PATH):
+        file_path = f"{PATH}/{file}"
+        shutil.copy(file_path, ENHANCED_DEST)
         os.unlink(file_path)
 
 def transferOptimize():
