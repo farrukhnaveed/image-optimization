@@ -131,7 +131,7 @@ def add_zurich_queue(source, last_image_id, limit, allow_blur = 0, allow_optimiz
     destination = "fc_rental_photos_optimized"
     image = "CONCAT('https://%s/images/listings/', product_image_dir, product_image)" % BUCKET_NAME
     
-    query = "SELECT frp.id, {} from {} frp inner join fc_product fp on frp.product_id = fp.id where frp.id > {} and fp.m_city = 'Zurich' and fp.m_state = 'Zurich' and fp.m_country = 'Switzerland' and fp.status = 'Publish' and fp.import_source_id != 33 and fp.master_status = 'Active' and frp.status = 'Active' LIMIT {}".format(image, source, last_image_id, limit)
+    query = "SELECT frp.id, {} from {} frp inner join fc_product fp on frp.product_id = fp.id left join fc_photos_optimization_queue q on q.source_id = frp.id where q.id is null and fp.m_city = 'Zurich' and fp.m_state = 'Zurich' and fp.m_country = 'Switzerland' and fp.status = 'Publish' and fp.import_source_id != 33 and fp.master_status = 'Active' and frp.status = 'Active' order by frp.id LIMIT {}".format(image, source, limit)
     result = execute(query)
 
     for (id, imageUrl) in result:

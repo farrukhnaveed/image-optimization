@@ -114,7 +114,7 @@ def enhance(queue_id):
         tile_pad=args.tile_pad,
         pre_pad=args.pre_pad,
         half=args.fp32,
-        gpu_id=args.gpu_id)
+        gpu_id=1)
 
     if args.face_enhance:  # Use GFPGAN for face enhancement
         from gfpgan import GFPGANer
