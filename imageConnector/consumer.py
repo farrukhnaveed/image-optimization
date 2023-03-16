@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 sys.path.append('../')
 from process import process
 load_dotenv()
+from datetime import datetime
+
 
 EXCHANGE = os.getenv('RABBITMQ_EXCHANGE')
 QUEUE_NAME = os.getenv('RABBITMQ_QUEUE')
@@ -27,7 +29,10 @@ print(' [*] Waiting for messages. To exit press CTRL+C')
 def callback(ch, method, properties, body):
     ch.basic_ack(delivery_tag=method.delivery_tag)
     data = json.loads(body)
-    print(" [x] Received %r" % str(body))
+    now = datetime.now()
+    dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+
+    print(" [x] At {}, Received {}".format(dt_string, str(body)))
     updateQueue(data['queue_id'], {
         "status": "running",
         "message": 'started request' 

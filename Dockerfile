@@ -1,5 +1,5 @@
-# FROM amd64/python:3.7-buster
-FROM arm64v8/python:3.7-buster
+FROM amd64/python:3.7-buster
+# FROM arm64v8/python:3.7-buster
 WORKDIR /app
 RUN apt-get update && apt-get install ffmpeg libsm6 libxext6  -y
 RUN python -m pip install --upgrade pip
