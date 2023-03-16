@@ -81,7 +81,7 @@ def set_queue_product_images():
 def set_queue_product_zurich_images():
     source = "fc_rental_photos"
     last_image_id = db.get_last_queued_image_id(source)
-    db.add_queue(source, last_image_id, THRESHOLD, 1, 1, 1)
+    db.add_zurich_queue(source, last_image_id, THRESHOLD, 1, 1, 1)
 
 def set_queue_product_images_optimized():
     source = "fc_rental_photos_optimized"

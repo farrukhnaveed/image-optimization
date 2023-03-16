@@ -28,11 +28,12 @@ def process(queue_obj):
     if queue_obj["allow_blur"] == True:
         db.log(queue_obj['id'], 'Checking blur', 'blur')
         blurImages = isBlur()
-        if (blurImages[0]['isBlur'] == False and blurImages[0]['shouldEnhance'] == False):
+        if (blurImages[0]['shouldEnhance'] == False):
             db.updateQueue(queue_obj['id'] ,{
-                "message": "image is neither blur nor need enhancement"
+                "is_blur": 1 if blurImages[0]['isBlur'] == True else 0,
+                "message": "image does not need enhancement"
             })
-            db.log(queue_obj['id'], "image is neither blur nor need enhancement", 'blur')
+            db.log(queue_obj['id'], "image does not need enhancement", 'blur')
             queue_obj["allow_optimize"] = False
             # transferOptimize()
             transferEnhanced()

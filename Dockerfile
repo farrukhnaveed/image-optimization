@@ -1,4 +1,5 @@
-FROM amd64/python:3.7-buster
+# FROM amd64/python:3.7-buster
+FROM arm64v8/python:3.7-buster
 WORKDIR /app
 RUN apt-get update && apt-get install ffmpeg libsm6 libxext6  -y
 RUN python -m pip install --upgrade pip
@@ -11,6 +12,7 @@ COPY ./imageEnhancer /app/imageEnhancer
 RUN cd imageEnhancer && python setup.py develop
 RUN cd /app
 COPY ./ ./
+RUN rm ./imageEnhancer/weights/RealESRGAN_x4plus.pth
 EXPOSE 5000
 
 # docker build -t image-processing .
